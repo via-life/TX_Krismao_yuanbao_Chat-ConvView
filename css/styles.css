@@ -161,6 +161,12 @@ body {
 }
 .upload-status.is-error { background: rgba(240, 67, 82, 0.1); color: var(--beacon-danger); }
 
+/* 首页：手动粘贴入口 */
+.upload-alt { display: flex; align-items: center; gap: 12px; margin: 24px auto 14px; width: min(420px, 80%); }
+.upload-alt__line { flex: 1; height: 1px; background: rgba(18, 36, 64, 0.12); }
+.upload-alt__or { font-size: 12px; color: var(--beacon-text-1); }
+.paste-entry { font-size: 14px; }
+
 /* 全屏拖拽遮罩 */
 .drop-overlay {
   position: fixed;
@@ -516,15 +522,56 @@ body {
 
 .yb-empty { text-align: center; color: var(--yb-text-secondary); padding: 40px; }
 
+/* ============================================================
+   视图 4：手动粘贴实时预览（左右分栏）
+   ============================================================ */
+.view--paste { display: flex; flex-direction: column; height: 100vh; background: #fff; }
+.paste-split { flex: 1 1 auto; display: flex; min-height: 0; }
+.paste-pane { flex: 1 1 50%; display: flex; flex-direction: column; min-width: 0; }
+.paste-pane--input { border-right: 1px solid var(--beacon-grey-2); background: var(--beacon-bg); }
+.paste-pane__head {
+  height: 46px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--beacon-grey-2);
+}
+.paste-pane__title { font-size: 13px; font-weight: 600; color: var(--beacon-title); }
+.paste-status { font-size: 12px; color: var(--beacon-text-1); }
+.paste-status.is-ok { color: #018a47; }
+.paste-status.is-error { color: var(--beacon-danger); }
+.paste-textarea {
+  flex: 1 1 auto;
+  width: 100%;
+  border: none;
+  resize: none;
+  padding: 18px;
+  font-family: 'Fira Code', 'Consolas', 'Menlo', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--beacon-text);
+  background: transparent;
+  outline: none;
+}
+.paste-pane--preview { background: var(--yb-page-bg); }
+.yb-preview { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.paste-pane--preview .yb-chat-scroll { padding: 24px 0 40px; }
+
 /* 滚动条美化 */
 .table-scroll::-webkit-scrollbar,
-.yb-chat-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.yb-chat-scroll::-webkit-scrollbar,
+.paste-textarea::-webkit-scrollbar { width: 10px; height: 10px; }
 .table-scroll::-webkit-scrollbar-thumb,
-.yb-chat-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 8px; }
+.yb-chat-scroll::-webkit-scrollbar-thumb,
+.paste-textarea::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 8px; }
 
 @media (max-width: 720px) {
   .yb-sidebar { display: none; }
   .search-input { width: 160px; }
   .trace-badge { position: static; margin: 12px 24px 0; }
   .yb-chat-scroll { padding-top: 16px; }
+  .paste-split { flex-direction: column; }
+  .paste-pane--input { border-right: none; border-bottom: 1px solid var(--beacon-grey-2); }
 }

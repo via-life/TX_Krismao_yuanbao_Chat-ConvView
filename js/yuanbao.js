@@ -59,22 +59,11 @@
     return '<div class="turn-sep' + (current ? ' turn-sep--current' : '') + '"><span>' + esc(label) + '</span></div>';
   }
 
-  /* 渲染整个 case：caseData = { traceId, messages:[{role,text,images}] } */
-  function render(caseData) {
-    var listEl = document.getElementById('yb-chat-list');
-    var badgeEl = document.getElementById('trace-badge-value');
-    var titleEl = document.getElementById('yb-conv-title');
-
-    badgeEl.textContent = caseData.traceId || '(无 trace ID)';
-
-    var msgs = caseData.messages || [];
-
-    // 侧栏标题取首条 user 文本
-    var firstUser = '';
-    for (var i = 0; i < msgs.length; i++) {
-      if (msgs[i].role === 'user' && msgs[i].text) { firstUser = msgs[i].text; break; }
-    }
-    if (titleEl) titleEl.textContent = firstUser ? firstUser.slice(0, 18) : '当前对话';
+  /* 由消息序列生成对话流 HTML（详情视图与粘贴预览共用）
+     messages = [{ role:'user'|'assistant', text, images:[] }] */
+  function buildChatHtml(msgs) {
+    msgs = msgs || [];
+    if (!msgs.length) return '<div class="yb-empty">暂无可展示的对话内容</div>';
 
     // 最后一条 user 的下标 → 当前轮次起点
     var lastUserIdx = -1;
@@ -83,20 +72,10 @@
     }
 
     var html = '';
-    var hasHistorySep = false;
     var hasCurrentSep = false;
 
-    if (!msgs.length) {
-      listEl.innerHTML = '<div class="yb-empty">该 case 无可展示的对话内容</div>';
-      resetScroll();
-      return;
-    }
-
     // 历史轮次分隔（当存在当前轮之前的消息时）
-    if (lastUserIdx > 0) {
-      html += sep('历史轮次', false);
-      hasHistorySep = true;
-    }
+    if (lastUserIdx > 0) html += sep('历史轮次', false);
 
     for (var k = 0; k < msgs.length; k++) {
       if (k === lastUserIdx) {
@@ -112,8 +91,31 @@
     if (!hasCurrentSep && lastUserIdx === 0) {
       html = sep('当前轮次', true) + html;
     }
+    return html;
+  }
 
-    listEl.innerHTML = html;
+  function firstUserText(msgs) {
+    for (var i = 0; i < (msgs || []).length; i++) {
+      if (msgs[i].role === 'user' && msgs[i].text) return msgs[i].text;
+    }
+    return '';
+  }
+
+  /* 渲染整个 case：caseData = { traceId, messages:[{role,text,images}] } */
+  function render(caseData) {
+    var listEl = document.getElementById('yb-chat-list');
+    var badgeEl = document.getElementById('trace-badge-value');
+    var titleEl = document.getElementById('yb-conv-title');
+
+    badgeEl.textContent = caseData.traceId || '(无 trace ID)';
+
+    var msgs = caseData.messages || [];
+    if (titleEl) {
+      var fu = firstUserText(msgs);
+      titleEl.textContent = fu ? fu.slice(0, 18) : '当前对话';
+    }
+
+    listEl.innerHTML = buildChatHtml(msgs);
     resetScroll();
   }
 
@@ -122,5 +124,5 @@
     if (scroll) scroll.scrollTop = 0;
   }
 
-  global.Yuanbao = { render: render };
+  global.Yuanbao = { render: render, buildChatHtml: buildChatHtml, firstUserText: firstUserText };
 })(window);

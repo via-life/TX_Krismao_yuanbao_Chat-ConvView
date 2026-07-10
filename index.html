@@ -48,6 +48,15 @@
       </div>
 
       <div id="upload-status" class="upload-status" hidden></div>
+
+      <div class="upload-alt">
+        <span class="upload-alt__line"></span>
+        <span class="upload-alt__or">或</span>
+        <span class="upload-alt__line"></span>
+      </div>
+      <button id="paste-entry-btn" class="btn btn--ghost paste-entry" type="button">
+        ✎ 手动粘贴对话内容（answer_完整）实时预览
+      </button>
     </div>
 
     <!-- 手动列映射对话框（Beacon 风格） -->
@@ -147,6 +156,44 @@
         <div id="yb-chat-list" class="yb-chat-list"></div>
       </div>
     </main>
+  </section>
+
+  <!-- ============ 视图 4：手动粘贴实时预览（整列式 answer_完整） ============ -->
+  <section id="view-paste" class="view view--paste" hidden>
+    <header class="topbar">
+      <div class="topbar__left">
+        <div class="brand__logo brand__logo--sm">元</div>
+        <span class="topbar__title">手动粘贴预览</span>
+        <span class="topbar__count">粘贴 answer_完整 内容，右侧实时还原元宝界面</span>
+      </div>
+      <div class="topbar__right">
+        <button id="paste-sample-btn" class="btn btn--ghost" type="button">填入示例</button>
+        <button id="paste-clear-btn" class="btn btn--ghost" type="button">清空</button>
+        <button id="paste-back-btn" class="btn btn--ghost" type="button">← 返回首页</button>
+      </div>
+    </header>
+    <div class="paste-split">
+      <!-- 左：字段内容输入 -->
+      <div class="paste-pane paste-pane--input">
+        <div class="paste-pane__head">
+          <span class="paste-pane__title">answer_完整 字段内容</span>
+          <span id="paste-status" class="paste-status"></span>
+        </div>
+        <textarea id="paste-textarea" class="paste-textarea" spellcheck="false"
+          placeholder='在此粘贴 answer_完整 字段内容，例如：&#10;[{"role":"user","content":[{"type":"text","text":"你好"},{"type":"image_url","image_url":{"url":"https://..."}}]},{"role":"assistant","content":"你好，有什么可以帮你？"}]'></textarea>
+      </div>
+      <!-- 右：元宝可视化预览 -->
+      <div class="paste-pane paste-pane--preview">
+        <div class="yb-preview">
+          <div class="yb-header">
+            <span class="yb-header__model">元宝 ▾</span>
+          </div>
+          <div class="yb-chat-scroll">
+            <div id="paste-chat-list" class="yb-chat-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <script src="js/parse.js"></script>

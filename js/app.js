@@ -18,11 +18,12 @@
   function $(id) { return document.getElementById(id); }
 
   function cacheEls() {
-    ['view-upload', 'view-overview', 'view-detail',
-     'drop-overlay', 'dropzone', 'pick-btn', 'file-input', 'upload-status',
+    ['view-upload', 'view-overview', 'view-detail', 'view-paste',
+     'drop-overlay', 'dropzone', 'pick-btn', 'file-input', 'upload-status', 'paste-entry-btn',
      'mapping-modal', 'mapping-format', 'mapping-fields', 'mapping-close', 'mapping-cancel', 'mapping-confirm',
      'search-input', 'reimport-btn', 'row-count', 'table-body', 'empty-hint',
-     'back-btn'].forEach(function (id) {
+     'back-btn',
+     'paste-textarea', 'paste-chat-list', 'paste-status', 'paste-back-btn', 'paste-clear-btn', 'paste-sample-btn'].forEach(function (id) {
       el[id] = $(id);
     });
   }
@@ -32,6 +33,7 @@
     el['view-upload'].hidden = name !== 'upload';
     el['view-overview'].hidden = name !== 'overview';
     el['view-detail'].hidden = name !== 'detail';
+    el['view-paste'].hidden = name !== 'paste';
     window.scrollTo(0, 0);
   }
 
@@ -258,6 +260,48 @@
     showView('detail');
   }
 
+  /* ---------- 手动粘贴实时预览 ---------- */
+  var SAMPLE_MESSAGES = '[{"role":"user","content":[{"type":"text","text":"这幅书法写的是什么字？"},{"type":"image_url","image_url":{"url":"https://img02.sogoucdn.com/app/a/sample_calligraphy"}}]},{"role":"assistant","content":"这幅书法作品写的是**“观书闻香”**四字，采用行草书体，笔法奔放、墨色浓淡相宜。"},{"role":"user","content":"能详细说说它的章法特点吗？"},{"role":"assistant","content":"当然。整幅作品疏密对比强烈，行气贯通，字间以牵丝自然衔接，营造出流动的韵律感。"}]';
+
+  function setPasteStatus(msg, kind) {
+    var e = el['paste-status'];
+    e.textContent = msg || '';
+    e.classList.toggle('is-ok', kind === 'ok');
+    e.classList.toggle('is-error', kind === 'error');
+  }
+
+  function renderPaste() {
+    var raw = el['paste-textarea'].value;
+    var listEl = el['paste-chat-list'];
+    if (!raw.trim()) {
+      listEl.innerHTML = '<div class="yb-empty">在左侧粘贴 answer_完整 内容，这里将实时还原元宝对话界面</div>';
+      setPasteStatus('', null);
+      return;
+    }
+    // 先校验 JSON，给出友好提示
+    var parsedOk = true;
+    try { JSON.parse(raw); } catch (e) { parsedOk = false; }
+
+    var msgs = Parser.parseMessages(raw);
+    listEl.innerHTML = Yuanbao.buildChatHtml(msgs);
+
+    if (!parsedOk) {
+      setPasteStatus('JSON 格式有误，暂无法解析', 'error');
+    } else if (!msgs.length) {
+      setPasteStatus('已解析，但未识别到对话消息（应为 messages 数组）', 'error');
+    } else {
+      var users = 0;
+      for (var i = 0; i < msgs.length; i++) if (msgs[i].role === 'user') users++;
+      setPasteStatus('已解析 ' + msgs.length + ' 条消息 · ' + users + ' 轮提问', 'ok');
+    }
+  }
+
+  function openPaste() {
+    showView('paste');
+    renderPaste();
+    el['paste-textarea'].focus();
+  }
+
   function escapeHtml(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -336,6 +380,20 @@
 
     // 返回总览
     el['back-btn'].addEventListener('click', function () { showView('overview'); });
+
+    // 手动粘贴实时预览
+    el['paste-entry-btn'].addEventListener('click', openPaste);
+    el['paste-back-btn'].addEventListener('click', function () { showView('upload'); });
+    el['paste-textarea'].addEventListener('input', renderPaste);
+    el['paste-clear-btn'].addEventListener('click', function () {
+      el['paste-textarea'].value = '';
+      renderPaste();
+      el['paste-textarea'].focus();
+    });
+    el['paste-sample-btn'].addEventListener('click', function () {
+      el['paste-textarea'].value = SAMPLE_MESSAGES;
+      renderPaste();
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
