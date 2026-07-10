@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>元宝对话还原可视化 · Yuanbao Chat ConvView</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <!-- CDN: CSV / XLSX 解析 -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- 全屏拖拽投放遮罩 -->
+  <div id="drop-overlay" class="drop-overlay" hidden>
+    <div class="drop-overlay__inner">
+      <div class="drop-overlay__icon">⬇</div>
+      <div class="drop-overlay__text">松开即可导入文件</div>
+      <div class="drop-overlay__hint">支持 CSV / XLSX / JSON</div>
+    </div>
+  </div>
+
+  <!-- ============ 视图 1：数据输入 ============ -->
+  <section id="view-upload" class="view view--upload">
+    <div class="aurora"></div>
+    <div class="upload-wrap">
+      <header class="brand">
+        <div class="brand__logo">元</div>
+        <div class="brand__titles">
+          <h1 class="brand__title">元宝对话还原可视化</h1>
+          <p class="brand__subtitle">Yuanbao Chat ConvView · 导入 case 数据，像素级还原对话交互</p>
+        </div>
+      </header>
+
+      <div id="dropzone" class="dropzone glass">
+        <div class="dropzone__icon">📄</div>
+        <div class="dropzone__title">将文件拖拽到此处，或点击选择</div>
+        <div class="dropzone__desc">支持 <b>.csv</b> / <b>.xlsx</b> / <b>.xls</b> / <b>.json</b>，自动识别编码（UTF-8 / GBK）</div>
+        <button id="pick-btn" class="btn btn--primary" type="button">选择文件</button>
+        <input id="file-input" type="file" accept=".csv,.xlsx,.xls,.json" hidden />
+        <div class="dropzone__fields">
+          将使用四列关键信息：
+          <span class="chip">trace ID</span>
+          <span class="chip">images</span>
+          <span class="chip">prompt</span>
+          <span class="chip">history</span>
+        </div>
+      </div>
+
+      <div id="upload-status" class="upload-status" hidden></div>
+    </div>
+
+    <!-- 手动列映射对话框（Beacon 风格） -->
+    <div id="mapping-modal" class="modal" hidden>
+      <div class="modal__mask"></div>
+      <div class="modal__dialog">
+        <div class="modal__header">
+          <span class="modal__title">选择字段映射</span>
+          <button id="mapping-close" class="modal__close" type="button">✕</button>
+        </div>
+        <div class="modal__body">
+          <div class="format-tabs" id="mapping-format">
+            <button class="format-tab is-active" data-format="columns" type="button">
+              <span class="format-tab__title">分列式</span>
+              <span class="format-tab__desc">prompt / images / history 分列</span>
+            </button>
+            <button class="format-tab" data-format="messages" type="button">
+              <span class="format-tab__title">整列式</span>
+              <span class="format-tab__desc">单列含完整多轮对话</span>
+            </button>
+          </div>
+          <div class="mapping-header">
+            <label class="mapping-title">Agent 输入内容<span class="required-mark">*</span>
+              <span class="info-icon" title="将表格中的列对应到还原所需的字段">ⓘ</span>
+            </label>
+            <p class="mapping-note">未自动识别到全部字段，请先选择数据格式，再为下列字段选择对应的数据列。</p>
+          </div>
+          <div id="mapping-fields" class="mapping-fields"></div>
+        </div>
+        <div class="modal__footer">
+          <button id="mapping-cancel" class="btn btn--ghost" type="button">取消</button>
+          <button id="mapping-confirm" class="btn btn--primary" type="button">确认并继续</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 视图 2：数据总览 ============ -->
+  <section id="view-overview" class="view view--overview" hidden>
+    <header class="topbar">
+      <div class="topbar__left">
+        <div class="brand__logo brand__logo--sm">元</div>
+        <span class="topbar__title">数据总览</span>
+        <span id="row-count" class="topbar__count"></span>
+      </div>
+      <div class="topbar__right">
+        <input id="search-input" class="search-input" type="search" placeholder="搜索 trace ID 或 prompt…" />
+        <button id="reimport-btn" class="btn btn--ghost" type="button">重新导入</button>
+      </div>
+    </header>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-idx">#</th>
+            <th class="col-trace">trace ID</th>
+            <th class="col-prompt">prompt（当前轮）</th>
+            <th class="col-images">images</th>
+            <th class="col-history">history</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div id="empty-hint" class="empty-hint" hidden>没有匹配的记录</div>
+    </div>
+  </section>
+
+  <!-- ============ 视图 3：可视化还原（元宝复刻） ============ -->
+  <section id="view-detail" class="view view--detail" hidden>
+    <aside class="yb-sidebar">
+      <div class="yb-sidebar__top">
+        <button id="back-btn" class="yb-back" type="button">← 返回总览</button>
+      </div>
+      <div class="yb-sidebar__brand">
+        <div class="yb-logo">元</div>
+        <span>元宝</span>
+      </div>
+      <div class="yb-sidebar__search">🔍 搜索</div>
+      <div class="yb-sidebar__group">
+        <div class="yb-sidebar__label">聊天</div>
+        <div id="yb-conv-title" class="yb-sidebar__item yb-sidebar__item--active">当前对话</div>
+      </div>
+    </aside>
+
+    <main class="yb-main">
+      <div class="yb-header">
+        <span class="yb-header__model">元宝 ▾</span>
+      </div>
+
+      <!-- trace ID 主键徽标（左上角醒目） -->
+      <div class="trace-badge">
+        <span class="trace-badge__label">TRACE ID</span>
+        <span id="trace-badge-value" class="trace-badge__value">—</span>
+      </div>
+
+      <div class="yb-chat-scroll">
+        <div id="yb-chat-list" class="yb-chat-list"></div>
+      </div>
+    </main>
+  </section>
+
+  <script src="js/parse.js"></script>
+  <script src="js/yuanbao.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
