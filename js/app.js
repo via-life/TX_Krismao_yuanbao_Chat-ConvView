@@ -166,17 +166,23 @@
     var m = state.mapping;
     if (state.format === 'messages') {
       state.cases = state.rows.map(function (row) {
-        var msgs = m.messages ? Parser.parseMessages(row[m.messages]) : [];
+        var msgs = m.messages ? Parser.parseConversation(row[m.messages]) : [];
         return { traceId: m.traceId ? (row[m.traceId] || '') : '', messages: msgs };
       });
     } else {
       state.cases = state.rows.map(function (row) {
         var images = m.images ? Parser.parseImages(row[m.images]) : [];
-        var history = m.history ? Parser.parseHistory(row[m.history]) : [];
+        // history 智能识别：既支持 turns(prompt/answer/convidx)，也支持 messages(role/content/multimedias)
+        var histMsgs = m.history ? Parser.parseConversation(row[m.history]) : [];
         var prompt = m.prompt ? (row[m.prompt] || '') : '';
+        var msgs = histMsgs.slice();
+        // 追加当前轮（有内容才追加，避免空气泡）
+        if ((prompt && String(prompt).trim()) || (images && images.length)) {
+          msgs.push({ role: 'user', text: prompt || '', images: images || [] });
+        }
         return {
           traceId: m.traceId ? (row[m.traceId] || '') : '',
-          messages: Parser.turnsToMessages(history, prompt, images)
+          messages: msgs
         };
       });
     }
@@ -282,17 +288,21 @@
     var parsedOk = true;
     try { JSON.parse(raw); } catch (e) { parsedOk = false; }
 
-    var msgs = Parser.parseMessages(raw);
+    var msgs = Parser.parseConversation(raw);
     listEl.innerHTML = Yuanbao.buildChatHtml(msgs);
 
     if (!parsedOk) {
       setPasteStatus('JSON 格式有误，暂无法解析', 'error');
     } else if (!msgs.length) {
-      setPasteStatus('已解析，但未识别到对话消息（应为 messages 数组）', 'error');
+      setPasteStatus('已解析，但未识别到对话消息（支持 messages 数组或 prompt/answer 数组）', 'error');
     } else {
-      var users = 0;
-      for (var i = 0; i < msgs.length; i++) if (msgs[i].role === 'user') users++;
-      setPasteStatus('已解析 ' + msgs.length + ' 条消息 · ' + users + ' 轮提问', 'ok');
+      var users = 0, imgs = 0;
+      for (var i = 0; i < msgs.length; i++) {
+        if (msgs[i].role === 'user') users++;
+        imgs += (msgs[i].images ? msgs[i].images.length : 0);
+      }
+      setPasteStatus('已解析 ' + msgs.length + ' 条消息 · ' + users + ' 轮提问' +
+        (imgs ? ' · ' + imgs + ' 张图片' : ''), 'ok');
     }
   }
 

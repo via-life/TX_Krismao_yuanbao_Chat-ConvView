@@ -180,7 +180,7 @@
           <span id="paste-status" class="paste-status"></span>
         </div>
         <textarea id="paste-textarea" class="paste-textarea" spellcheck="false"
-          placeholder='在此粘贴 answer_完整 字段内容，例如：&#10;[{"role":"user","content":[{"type":"text","text":"你好"},{"type":"image_url","image_url":{"url":"https://..."}}]},{"role":"assistant","content":"你好，有什么可以帮你？"}]'></textarea>
+          placeholder='在此粘贴对话内容，支持两类格式：&#10;① messages 数组：[{"role":"user","content":"...","images":["https://..."],"multimedias":[{"type":"image","url":"https://..."}]},{"role":"assistant","content":"..."}]&#10;② prompt/answer 数组：[{"prompt":"...","images":["https://..."],"answer":"...","convidx":"0"}]'></textarea>
       </div>
       <!-- 右：元宝可视化预览 -->
       <div class="paste-pane paste-pane--preview">

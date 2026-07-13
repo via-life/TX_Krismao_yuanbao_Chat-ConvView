@@ -155,6 +155,38 @@
   }
 
   /* ---------- 解析 JSON 列值 ---------- */
+  // 去重（保序）
+  function uniq(list) {
+    var seen = {}, out = [];
+    (list || []).forEach(function (x) {
+      if (x == null) return;
+      var k = String(x);
+      if (!seen[k]) { seen[k] = true; out.push(x); }
+    });
+    return out;
+  }
+
+  // 从一条对象里收集图片 URL：兼容 images 数组 + multimedias:[{type,url}]
+  function collectMediaImages(obj) {
+    if (!obj || typeof obj !== 'object') return [];
+    var urls = parseImages(obj.images);
+    if (Array.isArray(obj.multimedias)) {
+      obj.multimedias.forEach(function (mm) {
+        if (mm && mm.url && (mm.type == null || mm.type === 'image')) urls.push(String(mm.url));
+      });
+    }
+    // 兜底：部分数据把图片放在 multimedia / media / attachments
+    ['multimedia', 'media', 'attachments'].forEach(function (key) {
+      if (Array.isArray(obj[key])) {
+        obj[key].forEach(function (mm) {
+          if (mm && mm.url) urls.push(String(mm.url));
+          else if (typeof mm === 'string' && /^https?:\/\//i.test(mm)) urls.push(mm);
+        });
+      }
+    });
+    return uniq(urls);
+  }
+
   // images: '["url1","url2"]' 或逗号分隔字符串 → 数组
   function parseImages(val) {
     if (!val) return [];
@@ -197,7 +229,7 @@
       return {
         prompt: t.prompt != null ? String(t.prompt) : (t.query != null ? String(t.query) : ''),
         answer: t.answer != null ? String(t.answer) : (t.response != null ? String(t.response) : ''),
-        images: parseImages(t.images),
+        images: collectMediaImages(t),
         convidx: idx
       };
     });
@@ -252,6 +284,8 @@
         if (content.text != null) text = String(content.text);
         images = images.concat(parseImages(content.images));
       }
+      // 顶层 images / multimedias（元宝多模态格式：content 为纯文本，图片单列）
+      images = uniq(images.concat(collectMediaImages(m)));
       return { role: role, text: text, images: images };
     }).filter(function (m) { return m.role !== 'system' || m.text; });
   }
@@ -268,13 +302,69 @@
     return msgs;
   }
 
+  /* ---------- 智能解析：自动判定 messages / turns 两种数组形态 ---------- */
+  // 把任意会话内容解析成统一消息序列 [{role,text,images}]
+  // 支持：
+  //   A) messages 数组 [{role,content,images,multimedias}]
+  //   B) turns 数组    [{prompt,answer,images,convidx}]
+  function toArray(val) {
+    if (val == null || val === '') return [];
+    if (Array.isArray(val)) return val;
+    var s = String(val).trim();
+    if (!s || s === '[]' || s === 'null') return [];
+    try {
+      var parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && Array.isArray(parsed.messages)) return parsed.messages;
+      if (parsed && typeof parsed === 'object') return [parsed];
+    } catch (e) { /* 非 JSON */ }
+    return [];
+  }
+
+  function looksLikeMessages(arr) {
+    return arr.some(function (x) {
+      return x && typeof x === 'object' && !Array.isArray(x) && ('role' in x);
+    });
+  }
+
+  function looksLikeTurns(arr) {
+    return arr.some(function (x) {
+      return x && typeof x === 'object' && !Array.isArray(x) &&
+        !('role' in x) && (('prompt' in x) || ('answer' in x) || ('convidx' in x));
+    });
+  }
+
+  // turns → 完整消息序列（不追加当前空轮，用于整段会话展示）
+  function turnsToFullMessages(turns) {
+    var msgs = [];
+    (turns || []).forEach(function (t) {
+      if (t.prompt || (t.images && t.images.length)) {
+        msgs.push({ role: 'user', text: t.prompt || '', images: t.images || [] });
+      }
+      if (t.answer) msgs.push({ role: 'assistant', text: t.answer, images: [] });
+    });
+    return msgs;
+  }
+
+  function parseConversation(val) {
+    var arr = toArray(val);
+    if (!arr.length) return [];
+    // turns 特征优先级低于 messages：仅在没有 role 字段时按 turns 处理
+    if (looksLikeMessages(arr)) return parseMessages(arr);
+    if (looksLikeTurns(arr)) return turnsToFullMessages(normalizeTurns(arr));
+    // 兜底按 messages 处理
+    return parseMessages(arr);
+  }
+
   global.Parser = {
     parseFile: parseFile,
     autoDetect: autoDetect,
     parseImages: parseImages,
     parseHistory: parseHistory,
     parseMessages: parseMessages,
+    parseConversation: parseConversation,
     turnsToMessages: turnsToMessages,
+    turnsToFullMessages: turnsToFullMessages,
     decodeBuffer: decodeBuffer
   };
 })(window);

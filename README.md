@@ -34,7 +34,16 @@
 | `trace ID` | 主键 | `d9fef513e1574ae8...` |
 | `对话内容` | 单列内含 OpenAI 风格 `messages` 数组 | `[{"role":"user","content":[{"type":"text","text":"..."},{"type":"image_url","image_url":{"url":"..."}}]},{"role":"assistant","content":"..."}]` |
 
-> `content` 支持纯字符串，或由 `{"type":"text"}` / `{"type":"image_url"}` 段组成的数组；`role` 为 `user` / `assistant`。参考文件：`回复完整_已补全.xlsx`。
+> `content` 支持纯字符串，或由 `{"type":"text"}` / `{"type":"image_url"}` 段组成的数组；`role` 为 `user` / `assistant`。图片除内嵌在 `content` 外，也兼容消息顶层的 `images:["url",...]` 与 `multimedias:[{"type":"image","url":"..."}]`（两者自动去重）。参考文件：`回复完整_已补全.xlsx`。
+
+### 智能识别（history 列 / 手动粘贴）
+
+`history` 列（批量模式）与「手动粘贴预览」均会自动判定内容形态，无需手动指定，支持以下两类数组：
+
+1. **messages 数组**：`[{"role":"user","content":"...","images":["url"],"multimedias":[{"type":"image","url":"..."}]},{"role":"assistant","content":"..."}]`
+2. **prompt/answer 数组**：`[{"prompt":"...","images":["url1","url2"],"answer":"...","convidx":"0"},{"prompt":"...","images":[],"answer":"...","convidx":"1"}]`
+
+> 判定规则：元素含 `role` 字段按 messages 还原；否则按 `prompt`/`answer`/`convidx` 轮次还原（`convidx` 用于排序）。
 
 ## 技术栈
 
