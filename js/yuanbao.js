@@ -3,7 +3,7 @@
    统一渲染消息序列 case.messages = [{ role:'user'|'assistant', text, images:[] }]
    - user  → 用户气泡（靠右、浅灰底）
    - assistant → 元宝回复（靠左、纯文本、绿头像）
-   - 图片以蓝色下划线链接呈现，点击新标签打开（不加载图片本身）
+   - 图片优先直接渲染（像元宝网页版）；加载失败再降级为蓝色下划线链接
    - 最后一条 user 视为"当前轮次"，之前为"历史轮次"
    ============================================================ */
 (function (global) {
@@ -22,16 +22,24 @@
     return safe;
   }
 
-  /* 图片 URL 列表 → 蓝色下划线链接（新标签打开，不加载图片本身） */
-  function renderImageLinks(images, inBubble) {
+  /* 图片 URL 列表 → 优先直接渲染 <img>；加载失败时降级为蓝色下划线链接 */
+  function renderImages(images, inBubble) {
     if (!images || !images.length) return '';
-    var cls = 'img-links' + (inBubble ? ' img-links--in-bubble' : '');
+    var cls = 'img-block' + (inBubble ? ' img-block--in-bubble' : '');
     var html = '<div class="' + cls + '">';
-    html += '<span class="img-links__title">图片链接（' + images.length + '）：</span>';
     images.forEach(function (url) {
       var u = esc(url);
-      html += '<a class="img-link" href="' + u + '" target="_blank" rel="noopener noreferrer">' +
-        '<span class="img-link__ico">🔗</span>' + u + '</a>';
+      // 成功：图片可点击在新标签查看原图；
+      // onerror：隐藏图片链接容器，显示其后的降级文字链接
+      html += '<figure class="img-item">' +
+        '<a class="img-item__link" href="' + u + '" target="_blank" rel="noopener noreferrer">' +
+        '<img class="img-item__img" src="' + u + '" alt="图片" loading="lazy" ' +
+        'referrerpolicy="no-referrer" ' +
+        'onerror="var w=this.parentElement;w.style.display=\'none\';var f=w.nextElementSibling;if(f)f.style.display=\'inline-flex\';">' +
+        '</a>' +
+        '<a class="img-link img-item__fallback" href="' + u + '" target="_blank" rel="noopener noreferrer">' +
+        '<span class="img-link__ico">🔗</span>' + u + '</a>' +
+        '</figure>';
     });
     html += '</div>';
     return html;
@@ -40,7 +48,7 @@
   function humanMsg(text, images) {
     var html = '<div class="msg msg--human"><div class="bubble-human">';
     html += esc(text || '');
-    html += renderImageLinks(images, true);
+    html += renderImages(images, true);
     html += '</div></div>';
     return html;
   }
@@ -50,7 +58,7 @@
     html += '<div class="msg__avatar">元</div>';
     html += '<div class="ai-content">';
     html += renderAnswer(text || '');
-    html += renderImageLinks(images, false);
+    html += renderImages(images, false);
     html += '</div></div>';
     return html;
   }
