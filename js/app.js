@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    app.js —— 应用状态机与视图路由
    ============================================================ */
 (function () {
@@ -267,7 +267,7 @@
   }
 
   /* ---------- 手动粘贴实时预览 ---------- */
-  var SAMPLE_MESSAGES = '[{"role":"user","content":[{"type":"text","text":"这幅书法写的是什么字？"},{"type":"image_url","image_url":{"url":"https://img02.sogoucdn.com/app/a/sample_calligraphy"}}]},{"role":"assistant","content":"这幅书法作品写的是**“观书闻香”**四字，采用行草书体，笔法奔放、墨色浓淡相宜。"},{"role":"user","content":"能详细说说它的章法特点吗？"},{"role":"assistant","content":"当然。整幅作品疏密对比强烈，行气贯通，字间以牵丝自然衔接，营造出流动的韵律感。"}]';
+  var SAMPLE_MESSAGES = '[{"role":"user","content":[{"type":"text","text":"这幅书法写的是什么字？"},{"type":"image_url","image_url":{"url":"https://img02.sogoucdn.com/app/a/sample_calligraphy"}}]},{"role":"assistant","content":"这幅书法作品写的是**“观书闻香”**四字，采用行草书体，笔法奔放、墨色浓淡相宜。"},{"role":"user","content":"能详细说说它的章法特点吗？"},{"role":"assistant","content":"## 章法特点\\n\\n整幅作品疏密对比强烈，行气贯通，字间以牵丝自然衔接，营造出流动的韵律感。\\n\\n| 维度 | 表现 |\\n| :--- | :--- |\\n| 布局 | **疏密有致**，留白自然 |\\n| 行气 | 以牵丝衔接，连贯流动 |\\n| 墨色 | 浓淡变化丰富 |"}]';
 
   function setPasteStatus(msg, kind) {
     var e = el['paste-status'];

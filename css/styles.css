@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    元宝对话还原可视化 · styles.css
    外壳：StyleForge 玻璃拟态  |  选列：DeepOps Beacon  |  详情：元宝原生
    字体参考 ui-ux-pro-max 设计系统推荐（Fira Sans / 数据蓝）
@@ -487,23 +487,39 @@ body {
   padding: 12px 14px;
   font-size: 15px;
   line-height: 1.7;
-  color: var(--yb-text-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
+  color: var(--yb-text-primary);  word-break: break-word;
 }
 /* AI 消息：靠左、纯文本、无气泡背景（元宝网页版特征） */
 .ai-content {
   max-width: calc(100% - 44px);
   font-size: 15px;
   line-height: 1.75;
-  color: var(--yb-text-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
+  color: var(--yb-text-primary);  word-break: break-word;
 }
-.ai-content strong { font-weight: 600; }
-.ai-content .md-h { font-weight: 600; margin: 10px 0 4px; }
-.ai-content .md-li { padding-left: 2px; }
-
+.ai-content strong, .bubble-human strong { font-weight: 600; }
+.ai-content p, .bubble-human p { margin: 0 0 12px; }
+.ai-content > :last-child, .bubble-human > :last-child { margin-bottom: 0; }
+.md-heading { margin: 18px 0 8px; font-weight: 650; line-height: 1.4; }
+.md-heading--1 { font-size: 21px; }
+.md-heading--2 { font-size: 18px; }
+.md-heading--3 { font-size: 16px; }
+.md-heading--4, .md-heading--5, .md-heading--6 { font-size: 15px; }
+.md-list { margin: 0 0 12px; padding-left: 22px; }
+.md-list li + li { margin-top: 4px; }
+.md-quote { margin: 0 0 12px; padding: 4px 0 4px 12px; border-left: 3px solid #9edabd; color: var(--yb-text-secondary); }
+.md-rule { border: 0; border-top: 1px solid var(--yb-border, #e6e6e6); margin: 16px 0; }
+.ai-content code, .bubble-human code { padding: 2px 5px; border-radius: 4px; background: #f1f3f5; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.9em; }
+.md-code { position: relative; overflow: auto; margin: 0 0 12px; padding: 30px 14px 14px; border-radius: 8px; background: #24292f; color: #f5f7fa; line-height: 1.6; white-space: pre; }
+.md-code code { padding: 0; background: transparent; color: inherit; font-size: 13px; }
+.md-code__language { position: absolute; top: 8px; right: 12px; color: #aab4c3; font-size: 11px; line-height: 1; }
+.ai-content a, .bubble-human a { color: var(--yb-link); text-decoration: underline; text-underline-offset: 2px; }
+.md-table-wrap { overflow-x: auto; margin: 0 0 12px; border: 1px solid var(--yb-border, #e6e6e6); border-radius: 8px; }
+.md-table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 14px; line-height: 1.55; }
+.md-table th, .md-table td { padding: 9px 12px; border-bottom: 1px solid var(--yb-border, #e6e6e6); vertical-align: top; }
+.md-table th { background: #f6f8fa; color: var(--yb-text-primary); font-weight: 600; }
+.md-table tbody tr:last-child td { border-bottom: 0; }
+.md-align--center { text-align: center; }
+.md-align--right { text-align: right; }
 /* 图片：优先直接渲染，加载失败时降级为蓝色下划线链接 */
 .img-block { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 .img-block--in-bubble { margin-top: 8px; }

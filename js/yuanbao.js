@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    yuanbao.js —— 元宝对话流渲染（视图 3）
    统一渲染消息序列 case.messages = [{ role:'user'|'assistant', text, images:[] }]
    - user  → 用户气泡（靠右、浅灰底）
@@ -15,13 +15,13 @@
       .replace(/"/g, '&quot;');
   }
 
-  /* 轻量渲染 AI 文本：转义 + **加粗** + 保留换行（其余交给 white-space:pre-wrap） */
-  function renderAnswer(text) {
-    var safe = esc(text);
-    safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    return safe;
+  /* Markdown 文本：优先使用安全渲染器；异常时保留纯文本降级。 */
+  function renderMarkdown(text) {
+    if (global.MarkdownRenderer && typeof global.MarkdownRenderer.render === 'function') {
+      return global.MarkdownRenderer.render(text);
+    }
+    return esc(text);
   }
-
   /* 图片 URL 列表 → 优先直接渲染 <img>；加载失败时降级为蓝色下划线链接 */
   function renderImages(images, inBubble) {
     if (!images || !images.length) return '';
@@ -47,7 +47,7 @@
 
   function humanMsg(text, images) {
     var html = '<div class="msg msg--human"><div class="bubble-human">';
-    html += esc(text || '');
+    html += renderMarkdown(text || '');
     html += renderImages(images, true);
     html += '</div></div>';
     return html;
@@ -57,7 +57,7 @@
     var html = '<div class="msg msg--ai">';
     html += '<div class="msg__avatar">元</div>';
     html += '<div class="ai-content">';
-    html += renderAnswer(text || '');
+    html += renderMarkdown(text || '');
     html += renderImages(images, false);
     html += '</div></div>';
     return html;

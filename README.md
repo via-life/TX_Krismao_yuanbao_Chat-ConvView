@@ -1,4 +1,4 @@
-# 元宝对话还原可视化网页 · Yuanbao Chat ConvView
+﻿# 元宝对话还原可视化网页 · Yuanbao Chat ConvView
 
 导入「真实用户 × 腾讯元宝」的对话 case 数据（CSV / XLSX / JSON），像素级还原元宝对话交互并可视化浏览。纯静态前端，无需构建，可直接部署到 GitHub Pages。
 
@@ -10,7 +10,7 @@
 
 1. **数据输入**：拖拽整页任意位置或点击选择文件导入，支持两种数据格式，自动识别文件编码（UTF-8 / GBK / GB18030）。若表头列名与预期不符，弹出 **手动列映射** 界面（DeepOps Beacon 风格），可切换格式并把表格列对应到相应字段。
 2. **数据总览**：Excel 隔行填充色表格展示全部 case 的摘要（trace ID / 首条提问 / 图片数 / 对话轮次），支持按 `trace ID` 或对话内容实时搜索，点击任意行进入还原界面。
-3. **可视化还原**：像素级复刻元宝对话界面。左上角醒目展示 `trace ID` 主键徽标；按消息顺序还原多轮对话（用户气泡靠右 / 元宝回复靠左），最后一轮标为「当前轮次」，之前为「历史轮次」。图片以蓝色下划线链接呈现，点击在新标签页打开（不直接加载图片）。
+3. **可视化还原**：像素级复刻元宝对话界面。左上角醒目展示 `trace ID` 主键徽标；按消息顺序还原多轮对话（用户气泡靠右 / 元宝回复靠左），最后一轮标为「当前轮次」，之前为「历史轮次」。图片以蓝色下划线链接呈现，点击在新标签页打开（不直接加载图片）。 元宝回复文本支持安全的 Markdown 渲染，可展示换行、加粗、标题、列表、引用、代码块和表格。
 
 ## 支持的数据格式
 
@@ -51,6 +51,7 @@
 - [PapaParse](https://www.papaparse.com/)（CSV 解析，CDN）
 - [SheetJS](https://sheetjs.com/)（XLSX 解析，CDN）
 - 浏览器原生 `TextDecoder`（编码回退）
+- 内置安全 Markdown 渲染器（标题、列表、表格、代码块与 HTML 转义）
 - 设计参考：[StyleForge](https://github.com/via-life/StyleForge)（玻璃拟态外壳）、DeepOps Beacon（选列界面）、元宝网页版（还原界面）；设计系统由 `ui-ux-pro-max` skill 辅助生成
 
 ## 本地运行
@@ -69,6 +70,13 @@ TX_Krismao_yuanbao_Chat-ConvView/
 ├── css/styles.css     # 样式（玻璃拟态 / Beacon / 元宝）
 ├── js/parse.js        # 文件解析 + 编码回退 + JSON 列解析
 ├── js/yuanbao.js      # 元宝对话流渲染
+├── js/markdown.js     # 安全 Markdown 渲染
 ├── js/app.js          # 状态机与视图路由
+├── AGENT_CHANGELOG.md # 智能体修改日志
 └── .nojekyll          # GitHub Pages 托管
 ```
+## 项目更新记录
+
+| 时间 | 修改的所有文件名称 | 修改的内容 | 使用的智能体名称 | GitHub版本号 |
+| --- | --- | --- | --- | --- |
+| 2026-07-15 15:22 | `index.html`、`css/styles.css`、`js/app.js`、`js/yuanbao.js`、`js/markdown.js`、`README.md`、`AGENT_CHANGELOG.md` | 新增安全 Markdown 渲染，支持换行、标题、加粗、列表、引用、代码块与表格，并在详情页和实时预览统一生效。 | Codex GPT-5 | 待推送 |
