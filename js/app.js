@@ -409,6 +409,6 @@
   document.addEventListener('DOMContentLoaded', function () {
     cacheEls();
     bind();
-    showView('upload');
+    openPaste();
   });
 })();
