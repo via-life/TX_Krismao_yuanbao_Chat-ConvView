@@ -32,11 +32,24 @@
         </div>
       </header>
 
-      <div id="dropzone" class="dropzone glass">
+      <div id="paste-dropzone" class="dropzone glass">
+        <div class="dropzone__icon">✎</div>
+        <div class="dropzone__title">手动粘贴对话内容（answer_完整）实时预览</div>
+        <div class="dropzone__desc">粘贴 <b>messages</b> 或 <b>prompt/answer</b> 数组内容，右侧实时还原元宝界面</div>
+        <button id="paste-entry-btn" class="btn btn--primary" type="button">开始粘贴</button>
+      </div>
+
+      <div class="upload-alt">
+        <span class="upload-alt__line"></span>
+        <span class="upload-alt__or">或</span>
+        <span class="upload-alt__line"></span>
+      </div>
+
+      <div id="dropzone" class="dropzone glass dropzone--compact">
         <div class="dropzone__icon">📄</div>
         <div class="dropzone__title">将文件拖拽到此处，或点击选择</div>
         <div class="dropzone__desc">支持 <b>.csv</b> / <b>.xlsx</b> / <b>.xls</b> / <b>.json</b>，自动识别编码（UTF-8 / GBK）</div>
-        <button id="pick-btn" class="btn btn--primary" type="button">选择文件</button>
+        <button id="pick-btn" class="btn btn--ghost" type="button">选择文件</button>
         <input id="file-input" type="file" accept=".csv,.xlsx,.xls,.json" hidden />
         <div class="dropzone__fields">
           将使用四列关键信息：
@@ -48,15 +61,6 @@
       </div>
 
       <div id="upload-status" class="upload-status" hidden></div>
-
-      <div class="upload-alt">
-        <span class="upload-alt__line"></span>
-        <span class="upload-alt__or">或</span>
-        <span class="upload-alt__line"></span>
-      </div>
-      <button id="paste-entry-btn" class="btn btn--ghost paste-entry" type="button">
-        ✎ 手动粘贴对话内容（answer_完整）实时预览
-      </button>
     </div>
 
     <!-- 手动列映射对话框（Beacon 风格） -->

@@ -161,11 +161,14 @@ body {
 }
 .upload-status.is-error { background: rgba(240, 67, 82, 0.1); color: var(--beacon-danger); }
 
-/* 首页：手动粘贴入口 */
+/* 首页：次要入口分隔线 + 紧凑样式（文件导入退居第二入口） */
 .upload-alt { display: flex; align-items: center; gap: 12px; margin: 24px auto 14px; width: min(420px, 80%); }
 .upload-alt__line { flex: 1; height: 1px; background: rgba(18, 36, 64, 0.12); }
 .upload-alt__or { font-size: 12px; color: var(--beacon-text-1); }
-.paste-entry { font-size: 14px; }
+.dropzone--compact { padding: 28px 32px; }
+.dropzone--compact .dropzone__icon { font-size: 32px; }
+.dropzone--compact .dropzone__title { font-size: 15px; }
+.dropzone--compact .btn { margin-top: 16px; }
 
 /* 全屏拖拽遮罩 */
 .drop-overlay {
