@@ -74,7 +74,13 @@
 
   /* ---------- JSON ---------- */
   function parseJSON(text) {
-    var data = JSON.parse(text);
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      // 兼容整份文件是 Python print(list_of_dict) 导出的单引号字典/列表字面量
+      data = parsePyLiteral(text);
+    }
     var arr;
     if (Array.isArray(data)) arr = data;
     else if (data && Array.isArray(data.data)) arr = data.data;
@@ -505,6 +511,7 @@
     tryParseConversation: tryParseConversation,
     turnsToMessages: turnsToMessages,
     turnsToFullMessages: turnsToFullMessages,
-    decodeBuffer: decodeBuffer
+    decodeBuffer: decodeBuffer,
+    parseJSON: parseJSON
   };
 })(window);

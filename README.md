@@ -8,7 +8,7 @@
 
 ## 功能
 
-1. **数据输入**：拖拽整页任意位置或点击选择文件导入，支持两种数据格式，自动识别文件编码（UTF-8 / GBK / GB18030）。若表头列名与预期不符，弹出 **手动列映射** 界面（DeepOps Beacon 风格），可切换格式并把表格列对应到相应字段。
+1. **数据输入**：拖拽整页任意位置或点击选择文件导入，支持两种数据格式，自动识别文件编码（UTF-8 / GBK / GB18030）。若表头列名与预期不符，弹出 **手动列映射** 界面（DeepOps Beacon 风格），可切换格式并把表格列对应到相应字段。上传 `.json` 文件时，整份文件本身也兼容 Python `print(list_of_dict)` 导出的单引号字典/列表字面量，无需先转换成标准 JSON。
 2. **数据总览**：Excel 隔行填充色表格展示全部 case 的摘要（trace ID / 首条提问 / 图片数 / 对话轮次），支持按 `trace ID` 或对话内容实时搜索，点击任意行进入还原界面。
 3. **可视化还原**：像素级复刻元宝对话界面。左上角醒目展示 `trace ID` 主键徽标；按消息顺序还原多轮对话（用户气泡靠右 / 元宝回复靠左），最后一轮标为「当前轮次」，之前为「历史轮次」。图片以蓝色下划线链接呈现，点击在新标签页打开（不直接加载图片）。 元宝回复文本支持安全的 Markdown 渲染，可展示换行、加粗、标题、列表、引用、代码块和表格。
 
@@ -83,3 +83,4 @@ TX_Krismao_yuanbao_Chat-ConvView/
 | --- | --- | --- | --- | --- |
 | 2026-07-15 15:22 | `index.html`、`css/styles.css`、`js/app.js`、`js/yuanbao.js`、`js/markdown.js`、`README.md`、`AGENT_CHANGELOG.md` | 新增安全 Markdown 渲染，支持换行、标题、加粗、列表、引用、代码块与表格，并在详情页和实时预览统一生效。 | Codex GPT-5 | 196e2df |
 | 2026-09-16 11:01 | `js/parse.js`、`js/app.js`、`index.html`、`README.md`、`AGENT_CHANGELOG.md` | 手动粘贴预览与文件导入新增 Python 字典/列表字面量（单引号、True/False/None）兼容解析，修复粘贴 Python print() 导出数据时误报"JSON 格式有误"的问题；文件批量导入路径对单行解析异常静默降级，不再中断整批导入。 | Claude Sonnet 4.5 | c44c4ff |
+| 2026-09-16 11:30 | `js/parse.js`、`README.md`、`AGENT_CHANGELOG.md` | 补齐批量导入场景：上传的 `.json` 文件整体也兼容 Python 单引号字典/列表字面量（此前只有单元格里的 history/images 列内容支持，文件顶层仍严格要求标准 JSON），并导出 `Parser.parseJSON` 供校验。 | Claude Sonnet 4.5 | 待填写 |
