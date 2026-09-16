@@ -187,21 +187,137 @@
     return uniq(urls);
   }
 
+  /* ---------- 兼容 Python 字面量（单引号字符串、True/False/None）----------
+     用户常直接粘贴 Python print(list_of_dict) 的输出，不是合法 JSON（用单引号包字符串）。
+     手写递归下降解析，逐字符处理转义，避免正则整体替换引号误伤正文里的引号/撇号。 */
+  function parsePyLiteral(str) {
+    var i = 0;
+    var len = str.length;
+
+    function fail(msg) { throw new Error('PyLiteral: ' + msg + ' (at ' + i + ')'); }
+
+    function skipWs() { while (i < len && /\s/.test(str[i])) i++; }
+
+    function parseValue() {
+      skipWs();
+      if (i >= len) fail('unexpected end of input');
+      var c = str[i];
+      if (c === '{') return parseObject();
+      if (c === '[') return parseArray();
+      if (c === '\'' || c === '"') return parseString();
+      if (c === '-' || (c >= '0' && c <= '9')) return parseNumber();
+      return parseBareword();
+    }
+
+    function parseObject() {
+      i++; // '{'
+      var obj = {};
+      skipWs();
+      if (str[i] === '}') { i++; return obj; }
+      while (true) {
+        skipWs();
+        var key = parseValue();
+        skipWs();
+        if (str[i] !== ':') fail('expected ":"');
+        i++;
+        skipWs();
+        obj[key] = parseValue();
+        skipWs();
+        if (str[i] === ',') { i++; skipWs(); if (str[i] === '}') { i++; break; } continue; }
+        if (str[i] === '}') { i++; break; }
+        fail('expected "," or "}"');
+      }
+      return obj;
+    }
+
+    function parseArray() {
+      i++; // '['
+      var arr = [];
+      skipWs();
+      if (str[i] === ']') { i++; return arr; }
+      while (true) {
+        skipWs();
+        arr.push(parseValue());
+        skipWs();
+        if (str[i] === ',') { i++; skipWs(); if (str[i] === ']') { i++; break; } continue; }
+        if (str[i] === ']') { i++; break; }
+        fail('expected "," or "]"');
+      }
+      return arr;
+    }
+
+    function parseString() {
+      var quote = str[i];
+      i++;
+      var out = '';
+      while (i < len) {
+        var c = str[i];
+        if (c === quote) { i++; return out; }
+        if (c === '\\') {
+          var next = str[i + 1];
+          if (next === 'n') { out += '\n'; i += 2; }
+          else if (next === 't') { out += '\t'; i += 2; }
+          else if (next === 'r') { out += '\r'; i += 2; }
+          else if (next === 'b') { out += '\b'; i += 2; }
+          else if (next === 'f') { out += '\f'; i += 2; }
+          else if (next === '\\') { out += '\\'; i += 2; }
+          else if (next === '\'') { out += '\''; i += 2; }
+          else if (next === '"') { out += '"'; i += 2; }
+          else if (next === 'u') {
+            var hex = str.substr(i + 2, 4);
+            if (/^[0-9a-fA-F]{4}$/.test(hex)) { out += String.fromCharCode(parseInt(hex, 16)); i += 6; }
+            else { out += next == null ? '' : next; i += 2; }
+          } else { out += next == null ? '' : next; i += 2; }
+          continue;
+        }
+        out += c;
+        i++;
+      }
+      fail('unterminated string');
+    }
+
+    function parseNumber() {
+      var m = /^-?\d+(\.\d+)?([eE][+-]?\d+)?/.exec(str.slice(i));
+      if (!m) fail('invalid number');
+      i += m[0].length;
+      return parseFloat(m[0]);
+    }
+
+    function parseBareword() {
+      var m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(str.slice(i));
+      if (!m) fail('unexpected character "' + str[i] + '"');
+      var word = m[0];
+      i += word.length;
+      if (word === 'True' || word === 'true') return true;
+      if (word === 'False' || word === 'false') return false;
+      if (word === 'None' || word === 'null') return null;
+      if (word === 'NaN') return NaN;
+      fail('unexpected token "' + word + '"');
+    }
+
+    var result = parseValue();
+    skipWs();
+    if (i !== len) fail('unexpected trailing content');
+    return result;
+  }
+
   // images: '["url1","url2"]' 或逗号分隔字符串 → 数组
   function parseImages(val) {
     if (!val) return [];
     if (Array.isArray(val)) return val.filter(Boolean);
     var s = String(val).trim();
     if (!s || s === '[]' || s === 'null') return [];
+    var arr;
     try {
-      var arr = JSON.parse(s);
-      if (Array.isArray(arr)) return arr.filter(function (x) { return x != null && String(x).trim(); }).map(String);
-      if (typeof arr === 'string') return [arr];
+      arr = JSON.parse(s);
     } catch (e) {
-      // 非 JSON：可能是单个 URL 或逗号/换行分隔
-      if (/^https?:\/\//i.test(s)) {
-        return s.split(/[\n,]+/).map(function (x) { return x.trim(); }).filter(Boolean);
-      }
+      try { arr = parsePyLiteral(s); } catch (e2) { arr = undefined; }
+    }
+    if (Array.isArray(arr)) return arr.filter(function (x) { return x != null && String(x).trim(); }).map(String);
+    if (typeof arr === 'string') return [arr];
+    // 非 JSON/Python 字面量：可能是单个 URL 或逗号/换行分隔
+    if (/^https?:\/\//i.test(s)) {
+      return s.split(/[\n,]+/).map(function (x) { return x.trim(); }).filter(Boolean);
     }
     return [];
   }
@@ -212,11 +328,14 @@
     if (Array.isArray(val)) return normalizeTurns(val);
     var s = String(val).trim();
     if (!s || s === '[]' || s === 'null') return [];
+    var arr;
     try {
-      var arr = JSON.parse(s);
-      if (Array.isArray(arr)) return normalizeTurns(arr);
-      if (arr && typeof arr === 'object') return normalizeTurns([arr]);
-    } catch (e) { /* 解析失败返回空 */ }
+      arr = JSON.parse(s);
+    } catch (e) {
+      try { arr = parsePyLiteral(s); } catch (e2) { return []; }
+    }
+    if (Array.isArray(arr)) return normalizeTurns(arr);
+    if (arr && typeof arr === 'object') return normalizeTurns([arr]);
     return [];
   }
 
@@ -249,7 +368,9 @@
       if (!s || s === '[]' || s === 'null') return [];
       try {
         arr = JSON.parse(s);
-      } catch (e) { return []; }
+      } catch (e) {
+        try { arr = parsePyLiteral(s); } catch (e2) { return []; }
+      }
     }
     if (!Array.isArray(arr)) {
       if (arr && Array.isArray(arr.messages)) arr = arr.messages;
@@ -312,12 +433,21 @@
     if (Array.isArray(val)) return val;
     var s = String(val).trim();
     if (!s || s === '[]' || s === 'null') return [];
+    var parsed;
     try {
-      var parsed = JSON.parse(s);
-      if (Array.isArray(parsed)) return parsed;
-      if (parsed && Array.isArray(parsed.messages)) return parsed.messages;
-      if (parsed && typeof parsed === 'object') return [parsed];
-    } catch (e) { /* 非 JSON */ }
+      parsed = JSON.parse(s);
+    } catch (e) {
+      try {
+        parsed = parsePyLiteral(s);
+      } catch (e2) {
+        // 既不是合法 JSON，也不是 Python 字典/列表字面量 → 明确抛错，
+        // 由手动粘贴预览展示"格式有误"；文件批量导入路径需自行 try/catch 静默降级。
+        throw new Error('无法解析为 JSON 或 Python 字典/列表字面量');
+      }
+    }
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.messages)) return parsed.messages;
+    if (parsed && typeof parsed === 'object') return [parsed];
     return [];
   }
 
@@ -356,6 +486,15 @@
     return parseMessages(arr);
   }
 
+  // 供手动粘贴预览使用：不吞异常，明确区分"真的解析失败"与"解析成功但没有消息"
+  function tryParseConversation(val) {
+    try {
+      return { msgs: parseConversation(val), error: null };
+    } catch (e) {
+      return { msgs: [], error: e };
+    }
+  }
+
   global.Parser = {
     parseFile: parseFile,
     autoDetect: autoDetect,
@@ -363,6 +502,7 @@
     parseHistory: parseHistory,
     parseMessages: parseMessages,
     parseConversation: parseConversation,
+    tryParseConversation: tryParseConversation,
     turnsToMessages: turnsToMessages,
     turnsToFullMessages: turnsToFullMessages,
     decodeBuffer: decodeBuffer

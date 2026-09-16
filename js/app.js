@@ -162,18 +162,23 @@
   }
 
   /* ---------- 构建 case 列表（统一为 messages 序列） ---------- */
+  // 文件批量导入：单行数据格式异常（如残缺的 JSON/Python 字面量）不应中断整批解析，静默降级为空
+  function safeParseConversation(val) {
+    try { return Parser.parseConversation(val); } catch (e) { return []; }
+  }
+
   function buildCasesAndGo() {
     var m = state.mapping;
     if (state.format === 'messages') {
       state.cases = state.rows.map(function (row) {
-        var msgs = m.messages ? Parser.parseConversation(row[m.messages]) : [];
+        var msgs = m.messages ? safeParseConversation(row[m.messages]) : [];
         return { traceId: m.traceId ? (row[m.traceId] || '') : '', messages: msgs };
       });
     } else {
       state.cases = state.rows.map(function (row) {
         var images = m.images ? Parser.parseImages(row[m.images]) : [];
         // history 智能识别：既支持 turns(prompt/answer/convidx)，也支持 messages(role/content/multimedias)
-        var histMsgs = m.history ? Parser.parseConversation(row[m.history]) : [];
+        var histMsgs = m.history ? safeParseConversation(row[m.history]) : [];
         var prompt = m.prompt ? (row[m.prompt] || '') : '';
         var msgs = histMsgs.slice();
         // 追加当前轮（有内容才追加，避免空气泡）
@@ -284,15 +289,13 @@
       setPasteStatus('', null);
       return;
     }
-    // 先校验 JSON，给出友好提示
-    var parsedOk = true;
-    try { JSON.parse(raw); } catch (e) { parsedOk = false; }
-
-    var msgs = Parser.parseConversation(raw);
+    // 兼容合法 JSON 与 Python 字典/列表字面量（单引号）两种粘贴内容
+    var result = Parser.tryParseConversation(raw);
+    var msgs = result.msgs;
     listEl.innerHTML = Yuanbao.buildChatHtml(msgs);
 
-    if (!parsedOk) {
-      setPasteStatus('JSON 格式有误，暂无法解析', 'error');
+    if (result.error) {
+      setPasteStatus('JSON/Python 字典格式有误，暂无法解析', 'error');
     } else if (!msgs.length) {
       setPasteStatus('已解析，但未识别到对话消息（支持 messages 数组或 prompt/answer 数组）', 'error');
     } else {

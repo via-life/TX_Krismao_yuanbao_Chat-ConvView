@@ -35,7 +35,7 @@
       <div id="paste-dropzone" class="dropzone glass">
         <div class="dropzone__icon">✎</div>
         <div class="dropzone__title">手动粘贴对话内容（answer_完整）实时预览</div>
-        <div class="dropzone__desc">粘贴 <b>messages</b> 或 <b>prompt/answer</b> 数组内容，右侧实时还原元宝界面</div>
+        <div class="dropzone__desc">粘贴 <b>messages</b> 或 <b>prompt/answer</b> 数组内容（支持 JSON 或 Python 单引号字典/列表写法），右侧实时还原元宝界面</div>
         <button id="paste-entry-btn" class="btn btn--primary" type="button">开始粘贴</button>
       </div>
 
@@ -168,7 +168,7 @@
       <div class="topbar__left">
         <div class="brand__logo brand__logo--sm">元</div>
         <span class="topbar__title">手动粘贴预览</span>
-        <span class="topbar__count">粘贴 answer_完整 内容，右侧实时还原元宝界面</span>
+        <span class="topbar__count">粘贴 answer_完整 内容（JSON 或 Python 字典/列表字面量均可），右侧实时还原元宝界面</span>
       </div>
       <div class="topbar__right">
         <button id="paste-sample-btn" class="btn btn--ghost" type="button">填入示例</button>
@@ -184,7 +184,7 @@
           <span id="paste-status" class="paste-status"></span>
         </div>
         <textarea id="paste-textarea" class="paste-textarea" spellcheck="false"
-          placeholder='在此粘贴对话内容，支持两类格式：&#10;① messages 数组：[{"role":"user","content":"...","images":["https://..."],"multimedias":[{"type":"image","url":"https://..."}]},{"role":"assistant","content":"..."}]&#10;② prompt/answer 数组：[{"prompt":"...","images":["https://..."],"answer":"...","convidx":"0"}]'></textarea>
+          placeholder='在此粘贴对话内容，支持两类格式：&#10;① messages 数组：[{"role":"user","content":"...","images":["https://..."],"multimedias":[{"type":"image","url":"https://..."}]},{"role":"assistant","content":"..."}]&#10;② prompt/answer 数组：[{"prompt":"...","images":["https://..."],"answer":"...","convidx":"0"}]&#10;支持标准 JSON（双引号），也支持直接粘贴 Python print(list) 输出的单引号字典/列表写法'></textarea>
       </div>
       <!-- 右：元宝可视化预览 -->
       <div class="paste-pane paste-pane--preview">
