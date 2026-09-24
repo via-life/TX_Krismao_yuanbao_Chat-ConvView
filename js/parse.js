@@ -136,12 +136,16 @@
     history: ['history', 'histories', 'chathistory', 'conversationhistory', 'context', 'historyturns', '历史'],
     // 整列式：单列即含完整多轮对话（OpenAI messages 数组）
     messages: ['messages', 'message', 'conversation', 'conversations', 'dialogue', 'dialog',
-               'answer完整', '完整回复', '完整对话', '对话', 'chat', 'messagelist', 'answerfull', 'fullconversation']
+               'answer完整', '完整回复', '完整对话', '对话', 'chat', 'messagelist', 'answerfull', 'fullconversation',
+               // “完整的session_带location（新）”：整行 OpenAI messages（含 role/content/index/trace_id）
+               '完整的session带location（新）', 'session带location（新）', '完整的session带location(新)', 'session带location(新)'],
+    // 可选：轮次粒度的经纬度列（旧版 session_带location，非“（新）”整列式）
+    location: ['session带location']
   };
 
-  /* 自动识别列 → 返回映射 {traceId, prompt, images, history, messages}，找不到为 null */
+  /* 自动识别列 → 返回映射 {traceId, prompt, images, history, messages, location}，找不到为 null */
   function autoDetect(headers) {
-    var map = { traceId: null, prompt: null, images: null, history: null, messages: null };
+    var map = { traceId: null, prompt: null, images: null, history: null, messages: null, location: null };
     var normHeaders = headers.map(function (h) { return { raw: h, norm: normalize(h) }; });
 
     Object.keys(FIELD_ALIASES).forEach(function (field) {
@@ -191,6 +195,26 @@
       }
     });
     return uniq(urls);
+  }
+
+  /* ---------- 内嵌 <media_info>[...]</media_info> 标签 ----------
+     元宝 assistant 回复里常在文本中间嵌一段 <media_info>[{"type":"image"/"file","description":...,"url"/"path":...}]</media_info>，
+     原位替换为 Markdown 图片语法 ![desc](url)，交给 markdown.js 统一按图片渲染（失败自动降级为链接）。 */
+  function extractMediaInfo(text) {
+    if (text == null) return text;
+    return String(text).replace(/<media_info>([\s\S]*?)<\/media_info>/g, function (whole, jsonStr) {
+      var items;
+      try { items = JSON.parse(jsonStr); } catch (e) { return ''; }
+      if (!Array.isArray(items)) return '';
+      var md = items.map(function (it) {
+        if (!it) return '';
+        var url = it.url || it.path;
+        if (!url) return '';
+        var desc = (it.description != null ? String(it.description) : '图片').replace(/[\[\]]/g, '');
+        return '![' + desc + '](' + String(url) + ')';
+      }).filter(Boolean).join('\n\n');
+      return md ? ('\n\n' + md + '\n\n') : '';
+    });
   }
 
   /* ---------- 兼容 Python 字面量（单引号字符串、True/False/None）----------
@@ -413,8 +437,38 @@
       }
       // 顶层 images / multimedias（元宝多模态格式：content 为纯文本，图片单列）
       images = uniq(images.concat(collectMediaImages(m)));
-      return { role: role, text: text, images: images };
+      // 文本中间可能嵌 <media_info>[...]</media_info>，原位转成 Markdown 图片语法
+      text = extractMediaInfo(text);
+      var roundIndex = m.index != null ? parseInt(m.index, 10) : null;
+      return { role: role, text: text, images: images, roundIndex: isNaN(roundIndex) ? null : roundIndex };
     }).filter(function (m) { return m.role !== 'system' || m.text; });
+  }
+
+  /* ---------- 旧版 session_带location：按轮次取经纬度 ----------
+     每项形如 {"user prompt":..., "image_url":..., "location":"{\"lat\":..,\"lng\":..}"}（location 单层转义）
+     返回按数组下标（0-based，对应轮次 index-1）排列的 {lat,lng} 列表，取不到为 null */
+  function parseRoundLocations(val) {
+    if (val == null || val === '') return [];
+    var arr;
+    if (Array.isArray(val)) arr = val;
+    else {
+      var s = String(val).trim();
+      if (!s || s === '[]' || s === 'null') return [];
+      try { arr = JSON.parse(s); } catch (e) { try { arr = parsePyLiteral(s); } catch (e2) { return []; } }
+    }
+    if (!Array.isArray(arr)) return [];
+    return arr.map(function (t) {
+      if (!t || t.location == null) return null;
+      var loc = t.location;
+      if (typeof loc === 'string') {
+        try { loc = JSON.parse(loc); } catch (e) { return null; }
+      }
+      if (!loc || typeof loc !== 'object') return null;
+      var lat = loc.lat != null ? loc.lat : loc.latitude;
+      var lng = loc.lng != null ? loc.lng : (loc.lon != null ? loc.lon : loc.longitude);
+      if (lat == null || lng == null) return null;
+      return { lat: lat, lng: lng };
+    });
   }
 
   /* ---------- 把分列式(prompt/images/history)统一成消息序列 ---------- */
@@ -511,6 +565,8 @@
     tryParseConversation: tryParseConversation,
     turnsToMessages: turnsToMessages,
     turnsToFullMessages: turnsToFullMessages,
+    parseRoundLocations: parseRoundLocations,
+    extractMediaInfo: extractMediaInfo,
     decodeBuffer: decodeBuffer,
     parseJSON: parseJSON
   };

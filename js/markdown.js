@@ -18,6 +18,32 @@
     return /^(https?:\/\/|mailto:)/i.test(url) ? url : '';
   }
 
+  /* 图片：与 yuanbao.js 的 renderImages 同款结构/降级逻辑，保持视觉与交互一致。
+     http(s) 链接：优先渲染 <img>，加载失败时隐藏图片、显示紧邻的 🔗 降级链接。
+     非 http(s)（如本地路径，出现在个别 media_info 脏数据里）：不进 href/src，只展示不可跳转的 🔗 提示，避免不安全 URL。 */
+  function imageHtml(desc, url) {
+    var d = esc(desc || '图片');
+    var href = safeUrl(url);
+    if (!href) {
+      return '<span class="img-link">' +
+        '<span class="img-link__ico">🔗</span>' + d + '</span>';
+    }
+    var u = esc(href);
+    return '<figure class="img-item md-img-item">' +
+      '<a class="img-item__link" href="' + u + '" target="_blank" rel="noopener noreferrer">' +
+      '<img class="img-item__img" src="' + u + '" alt="' + d + '" loading="lazy" ' +
+      'referrerpolicy="no-referrer" ' +
+      'onerror="var w=this.parentElement;w.style.display=\'none\';var f=w.nextElementSibling;if(f)f.style.display=\'inline-flex\';">' +
+      '</a>' +
+      '<a class="img-link img-item__fallback" href="' + u + '" target="_blank" rel="noopener noreferrer">' +
+      '<span class="img-link__ico">🔗</span>' + d + '</a>' +
+      '</figure>';
+  }
+
+  var IMAGE_RE = /!\[([^\]\n]*)\]\(([^\s)]+)\)/;
+  var IMAGE_LINE_RE = new RegExp('^' + IMAGE_RE.source + '$');
+  var IMAGE_RE_G = new RegExp(IMAGE_RE.source, 'g');
+
   function inline(source) {
     var tokens = [];
     function stash(html) {
@@ -29,6 +55,11 @@
     var text = String(source == null ? '' : source);
     text = text.replace(/`([^`\n]+)`/g, function (_, code) {
       return stash('<code>' + esc(code) + '</code>');
+    });
+    // 图片必须先于链接匹配：![desc](url) 内含 [desc](url)，否则会被下面的链接正则先吞掉
+    text = text.replace(IMAGE_RE_G, function (_, desc, url) {
+      var html = imageHtml(desc, url);
+      return html ? stash(html) : '';
     });
     text = text.replace(/\[([^\]\n]+)\]\(([^\s)]+)(?:\s+"[^"]*")?\)/g, function (_, label, url) {
       var href = safeUrl(url);
@@ -131,6 +162,15 @@
       var line = lines[i];
       if (!line.trim()) {
         flushParagraph();
+        i++;
+        continue;
+      }
+
+      var imgLine = line.trim().match(IMAGE_LINE_RE);
+      if (imgLine) {
+        flushParagraph();
+        var imgHtml = imageHtml(imgLine[1], imgLine[2]);
+        if (imgHtml) html.push(imgHtml);
         i++;
         continue;
       }

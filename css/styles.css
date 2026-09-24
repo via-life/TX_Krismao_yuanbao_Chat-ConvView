@@ -300,6 +300,9 @@ body {
 .topbar__left { display: flex; align-items: center; gap: 12px; }
 .topbar__title { font-size: 17px; font-weight: 600; color: var(--beacon-title); }
 .topbar__count { font-size: 13px; color: var(--beacon-text-1); }
+.file-badge { display: inline-flex; align-items: center; gap: 6px; }
+.file-badge .file-badge__chip { font-size: 12px; }
+.file-badge .file-badge__tag { font-size: 11px; background: rgba(0, 178, 89, 0.12); color: #018a47; }
 .topbar__right { display: flex; align-items: center; gap: 12px; }
 .search-input {
   width: 300px;
@@ -355,6 +358,18 @@ body {
 }
 .count-badge--muted { background: #eef1f6; color: var(--beacon-text-1); }
 .count-badge--history { background: rgba(0, 178, 89, 0.12); color: #018a47; }
+.msg-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  background: #eef1f6;
+  color: var(--beacon-text-1);
+}
+.msg-location__ico { flex: 0 0 auto; }
 .empty-hint { padding: 60px; text-align: center; color: var(--beacon-text-1); font-size: 14px; }
 
 /* ============================================================

@@ -53,12 +53,16 @@
     return html;
   }
 
-  function aiMsg(text, images) {
+  function aiMsg(text, images, location) {
     var html = '<div class="msg msg--ai">';
     html += '<div class="msg__avatar">元</div>';
     html += '<div class="ai-content">';
     html += renderMarkdown(text || '');
     html += renderImages(images, false);
+    if (location && location.lat != null && location.lng != null) {
+      html += '<div class="msg-location"><span class="msg-location__ico">📍</span>' +
+        esc(location.lat) + ', ' + esc(location.lng) + '</div>';
+    }
     html += '</div></div>';
     return html;
   }
@@ -91,7 +95,7 @@
         hasCurrentSep = true;
       }
       var m = msgs[k];
-      if (m.role === 'assistant') html += aiMsg(m.text, m.images);
+      if (m.role === 'assistant') html += aiMsg(m.text, m.images, m.location);
       else html += humanMsg(m.text, m.images);
     }
 

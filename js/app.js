@@ -8,10 +8,11 @@
     headers: [],
     rows: [],
     format: 'columns', // 'columns' 分列式(A) | 'messages' 整列式(B)
-    mapping: { traceId: null, prompt: null, images: null, history: null, messages: null },
+    mapping: { traceId: null, prompt: null, images: null, history: null, messages: null, location: null },
     cases: [],      // 规范化后的 case 列表
     filtered: [],   // 当前过滤结果（索引指向 cases）
-    search: ''
+    search: '',
+    fileMeta: null  // { name, ext, tag } 当前导入文件的来源信息，用于总览页图标
   };
 
   var el = {};
@@ -21,7 +22,7 @@
     ['view-upload', 'view-overview', 'view-detail', 'view-paste',
      'drop-overlay', 'dropzone', 'pick-btn', 'file-input', 'upload-status', 'paste-entry-btn',
      'mapping-modal', 'mapping-format', 'mapping-fields', 'mapping-close', 'mapping-cancel', 'mapping-confirm',
-     'search-input', 'reimport-btn', 'row-count', 'table-body', 'empty-hint',
+     'search-input', 'reimport-btn', 'row-count', 'table-body', 'empty-hint', 'file-badge',
      'back-btn',
      'paste-textarea', 'paste-chat-list', 'paste-status', 'paste-back-btn', 'paste-clear-btn', 'paste-sample-btn'].forEach(function (id) {
       el[id] = $(id);
@@ -44,9 +45,17 @@
   }
 
   /* ---------- 文件处理 ---------- */
+  var FILE_TYPE_ICONS = { csv: '📄', xlsx: '📊', xls: '📊', json: '🔗' };
+  // “完整的session_带location（新）”及其常见写法变体：整列式 messages 命中此列时打“含定位”标签
+  function isLocationSessionColumn(name) {
+    return /session/i.test(name || '') && /带location/.test(name || '') && /新/.test(name || '');
+  }
+
   function handleFile(file) {
     if (!file) return;
     setStatus('正在解析「' + file.name + '」…', false);
+    var ext = (file.name || '').split('.').pop().toLowerCase();
+    state.fileMeta = { name: file.name, ext: ext, tag: null };
     Parser.parseFile(file).then(function (result) {
       state.headers = result.headers || [];
       state.rows = result.rows || [];
@@ -59,9 +68,11 @@
       if (map.messages) {
         state.format = 'messages';
         map.prompt = null; map.images = null; map.history = null;
+        if (isLocationSessionColumn(map.messages)) state.fileMeta.tag = '含定位';
       } else {
         state.format = 'columns';
         map.messages = null;
+        map.location = null;
       }
       state.mapping = map;
 
@@ -90,7 +101,8 @@
   ];
   var FIELD_META_MESSAGES = [
     { key: 'traceId', label: 'trace ID', required: true, desc: '主键标识' },
-    { key: 'messages', label: '对话内容', required: true, desc: '整列含完整多轮对话（messages 数组）' }
+    { key: 'messages', label: '对话内容', required: true, desc: '整列含完整多轮对话（messages 数组）' },
+    { key: 'location', label: '经纬度（可选）', required: false, desc: '轮次粒度的 session_带location 列，展示在对应回答下方' }
   ];
   function fieldMeta() {
     return state.format === 'messages' ? FIELD_META_MESSAGES : FIELD_META_COLUMNS;
@@ -144,7 +156,7 @@
 
   function confirmMapping() {
     var selects = el['mapping-fields'].querySelectorAll('.field-select');
-    var newMap = { traceId: null, prompt: null, images: null, history: null, messages: null };
+    var newMap = { traceId: null, prompt: null, images: null, history: null, messages: null, location: null };
     var ok = true;
     selects.forEach(function (s) {
       var field = s.getAttribute('data-field');
@@ -157,6 +169,9 @@
     });
     if (!ok) return;
     state.mapping = newMap;
+    if (state.fileMeta) {
+      state.fileMeta.tag = (newMap.messages && isLocationSessionColumn(newMap.messages)) ? '含定位' : null;
+    }
     closeMapping();
     buildCasesAndGo();
   }
@@ -172,6 +187,17 @@
     if (state.format === 'messages') {
       state.cases = state.rows.map(function (row) {
         var msgs = m.messages ? safeParseConversation(row[m.messages]) : [];
+        if (m.location) {
+          var locs = Parser.parseRoundLocations(row[m.location]);
+          if (locs.length) {
+            msgs.forEach(function (msg) {
+              if (msg.role === 'assistant' && msg.roundIndex != null) {
+                var loc = locs[msg.roundIndex - 1];
+                if (loc) msg.location = loc;
+              }
+            });
+          }
+        }
         return { traceId: m.traceId ? (row[m.traceId] || '') : '', messages: msgs };
       });
     } else {
@@ -194,7 +220,23 @@
     state.search = '';
     if (el['search-input']) el['search-input'].value = '';
     applyFilter();
+    renderFileBadge();
     showView('overview');
+  }
+
+  /* ---------- 文件来源图标（总览页常驻，区分不同数据文件/格式） ---------- */
+  function renderFileBadge() {
+    var box = el['file-badge'];
+    if (!box) return;
+    var fm = state.fileMeta;
+    if (!fm) { box.hidden = true; box.innerHTML = ''; return; }
+    var icon = FILE_TYPE_ICONS[fm.ext] || '📁';
+    var name = fm.name.length > 28 ? fm.name.slice(0, 26) + '…' : fm.name;
+    var html = '<span class="chip file-badge__chip" title="' + escapeHtml(fm.name) + '">' +
+      icon + ' ' + escapeHtml(name) + '</span>';
+    if (fm.tag) html += '<span class="chip file-badge__tag">' + escapeHtml(fm.tag) + '</span>';
+    box.innerHTML = html;
+    box.hidden = false;
   }
 
   /* ---------- 总览渲染 ---------- */
