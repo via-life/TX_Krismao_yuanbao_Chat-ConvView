@@ -36,6 +36,10 @@
 
 > `content` 支持纯字符串，或由 `{"type":"text"}` / `{"type":"image_url"}` 段组成的数组；`role` 为 `user` / `assistant`。图片除内嵌在 `content` 外，也兼容消息顶层的 `images:["url",...]` 与 `multimedias:[{"type":"image","url":"..."}]`（两者自动去重）。参考文件：`回复完整_已补全.xlsx`。
 
+### 单条回答对象（含 replaces 图片占位）
+
+整列式的「对话内容」列（含 CSV 里 `answer` 列）还支持元宝单条回答对象：`{"traceID":"...","content":[{"msg":"正文…[](@replace=media_xxx)…"}],"extra":{"replaces":[{"id":"media_xxx","display":"image","multimedias":[{"url":"...","description":"..."}]}]}}`。正文取 `content[].msg`，占位符 `[](@replace=id)` 原位替换为 `replaces` 中对应图片；若同时映射了 `prompt` 列，会作为用户气泡补在该回答之前。也兼容直接从 CSV 单元格复制、外层带双引号且内部引号为 `""` 的写法。
+
 ### 智能识别（history 列 / 手动粘贴）
 
 `history` 列（批量模式）与「手动粘贴预览」均会自动判定内容形态，无需手动指定，支持以下两类数组：
@@ -84,3 +88,4 @@ TX_Krismao_yuanbao_Chat-ConvView/
 | 2026-07-15 15:22 | `index.html`、`css/styles.css`、`js/app.js`、`js/yuanbao.js`、`js/markdown.js`、`README.md`、`AGENT_CHANGELOG.md` | 新增安全 Markdown 渲染，支持换行、标题、加粗、列表、引用、代码块与表格，并在详情页和实时预览统一生效。 | Codex GPT-5 | 196e2df |
 | 2026-09-16 11:01 | `js/parse.js`、`js/app.js`、`index.html`、`README.md`、`AGENT_CHANGELOG.md` | 手动粘贴预览与文件导入新增 Python 字典/列表字面量（单引号、True/False/None）兼容解析，修复粘贴 Python print() 导出数据时误报"JSON 格式有误"的问题；文件批量导入路径对单行解析异常静默降级，不再中断整批导入。 | Claude Sonnet 4.5 | c44c4ff |
 | 2026-09-16 11:30 | `js/parse.js`、`README.md`、`AGENT_CHANGELOG.md` | 补齐批量导入场景：上传的 `.json` 文件整体也兼容 Python 单引号字典/列表字面量（此前只有单元格里的 history/images 列内容支持，文件顶层仍严格要求标准 JSON），并导出 `Parser.parseJSON` 供校验。 | Claude Sonnet 4.5 | 4e5eb78 |
+| 2026-10-13 15:00 | `js/parse.js`、`js/app.js`、`README.md`、`AGENT_CHANGELOG.md` | 新增元宝单条回答对象格式（content[].msg + extra.replaces）支持：`[](@replace=id)` 占位符原位替换为图片，兼容 CSV 单元格转义写法，`answer` 列自动识别为整列式并可配合 `prompt` 列补用户气泡。 | Claude Code | 待上传 |

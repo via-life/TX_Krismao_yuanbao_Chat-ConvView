@@ -67,7 +67,7 @@
       // 判定格式：识别到 messages 列 → 整列式(B)；否则分列式(A)
       if (map.messages) {
         state.format = 'messages';
-        map.prompt = null; map.images = null; map.history = null;
+        map.images = null; map.history = null;
         if (isLocationSessionColumn(map.messages)) state.fileMeta.tag = '含定位';
       } else {
         state.format = 'columns';
@@ -101,7 +101,8 @@
   ];
   var FIELD_META_MESSAGES = [
     { key: 'traceId', label: 'trace ID', required: true, desc: '主键标识' },
-    { key: 'messages', label: '对话内容', required: true, desc: '整列含完整多轮对话（messages 数组）' },
+    { key: 'messages', label: '对话内容', required: true, desc: '整列含完整多轮对话（messages 数组），或单条回答对象（含 content[].msg 与 replaces）' },
+    { key: 'prompt', label: 'prompt（可选）', required: false, desc: '用户提问列；仅当对话内容只有单条回答时，作为用户气泡补在回答前' },
     { key: 'location', label: '经纬度（可选）', required: false, desc: '轮次粒度的 session_带location 列，展示在对应回答下方' }
   ];
   function fieldMeta() {
@@ -187,6 +188,10 @@
     if (state.format === 'messages') {
       state.cases = state.rows.map(function (row) {
         var msgs = m.messages ? safeParseConversation(row[m.messages]) : [];
+        var userPrompt = m.prompt ? String(row[m.prompt] || '').trim() : '';
+        if (userPrompt && msgs.length && msgs[0].role === 'assistant') {
+          msgs.unshift({ role: 'user', text: userPrompt, images: [] });
+        }
         if (m.location) {
           var locs = Parser.parseRoundLocations(row[m.location]);
           if (locs.length) {

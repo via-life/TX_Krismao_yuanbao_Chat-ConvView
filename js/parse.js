@@ -135,7 +135,7 @@
     images: ['images', 'image', 'imageurls', 'imgs', 'imageurl', 'pics', 'currentimages'],
     history: ['history', 'histories', 'chathistory', 'conversationhistory', 'context', 'historyturns', '历史'],
     // 整列式：单列即含完整多轮对话（OpenAI messages 数组）
-    messages: ['messages', 'message', 'conversation', 'conversations', 'dialogue', 'dialog',
+    messages: ['messages', 'message', 'conversation', 'conversations', 'dialogue', 'dialog', 'answer',
                'answer完整', '完整回复', '完整对话', '对话', 'chat', 'messagelist', 'answerfull', 'fullconversation',
                // “完整的session_带location（新）”：整行 OpenAI messages（含 role/content/index/trace_id）
                '完整的session带location（新）', 'session带location（新）', '完整的session带location(新)', 'session带location(新)'],
@@ -500,9 +500,18 @@
       try {
         parsed = parsePyLiteral(s);
       } catch (e2) {
-        // 既不是合法 JSON，也不是 Python 字典/列表字面量 → 明确抛错，
-        // 由手动粘贴预览展示"格式有误"；文件批量导入路径需自行 try/catch 静默降级。
-        throw new Error('无法解析为 JSON 或 Python 字典/列表字面量');
+        // 兼容直接从 CSV 单元格复制的内容：外层带双引号、内部引号被转义为 ""
+        var unwrapped = unwrapCsvCell(s);
+        if (unwrapped === null) {
+          // 既不是合法 JSON，也不是 Python 字典/列表字面量 → 明确抛错，
+          // 由手动粘贴预览展示"格式有误"；文件批量导入路径需自行 try/catch 静默降级。
+          throw new Error('无法解析为 JSON 或 Python 字典/列表字面量');
+        }
+        try { parsed = JSON.parse(unwrapped); } catch (e3) {
+          try { parsed = parsePyLiteral(unwrapped); } catch (e4) {
+            throw new Error('无法解析为 JSON 或 Python 字典/列表字面量');
+          }
+        }
       }
     }
     if (Array.isArray(parsed)) return parsed;
@@ -536,9 +545,59 @@
     return msgs;
   }
 
+  /* ---------- CSV 单元格转义还原 ----------
+     形如 "{""a"":""b""}"：去掉首尾引号并把 "" 还原为 "；不满足特征返回 null */
+  function unwrapCsvCell(s) {
+    var t = String(s).trim();
+    if (t.length < 2 || t.charAt(0) !== '"' || t.charAt(t.length - 1) !== '"') return null;
+    var inner = t.slice(1, -1);
+    if (inner.indexOf('""') === -1) return null;
+    return inner.replace(/""/g, '"');
+  }
+
+  /* ---------- 元宝“单条回答对象”格式 ----------
+     {"traceID","speechType","content":[{"msg":"...[](@replace=media_x)..."}],
+      "extra":{"replaces":[{"id":"media_x","display":"image","multimedias":[{"url","description"}]}]}}
+     正文取 content[].msg，占位符 [](@replace=id) 原位替换为 replaces 中对应的图片。 */
+  function looksLikeAnswerObject(o) {
+    return !!o && typeof o === 'object' && !Array.isArray(o) && !('role' in o) &&
+      Array.isArray(o.content) && o.content.some(function (c) { return c && typeof c === 'object' && c.msg != null; });
+  }
+
+  function mdUrl(u) {
+    return String(u).replace(/\s/g, '%20').replace(/\(/g, '%28').replace(/\)/g, '%29');
+  }
+
+  function answerObjectToMessages(obj) {
+    var extra = obj.extra && typeof obj.extra === 'object' ? obj.extra : {};
+    var replaces = Array.isArray(extra.replaces) ? extra.replaces : (Array.isArray(obj.replaces) ? obj.replaces : []);
+    var byId = {};
+    replaces.forEach(function (r) {
+      if (!r || r.id == null) return;
+      var mds = [];
+      (Array.isArray(r.multimedias) ? r.multimedias : []).forEach(function (mm) {
+        if (!mm) return;
+        var isImg = (mm.type == null || mm.type === 'image') && (mm.mediaType == null || mm.mediaType === 'image');
+        var url = mm.url || mm.resourceUrl || mm.previewUrl || mm.originUrl;
+        if (!isImg || !url) return;
+        var desc = (mm.description != null && mm.description !== '' ? String(mm.description) : '图片').replace(/[\[\]\n]/g, ' ');
+        mds.push('![' + desc + '](' + mdUrl(url) + ')');
+      });
+      byId[r.id] = mds.join('\n\n');
+    });
+    var text = obj.content.filter(function (c) { return c && c.msg != null; })
+      .map(function (c) { return String(c.msg); }).join('\n\n');
+    text = text.replace(/\[[^\]\n]*\]\(@replace=([^)\s]+)\)/g, function (whole, id) {
+      return byId[id] ? ('\n\n' + byId[id] + '\n\n') : '';
+    });
+    text = extractMediaInfo(text).replace(/\n{3,}/g, '\n\n').trim();
+    return [{ role: 'assistant', text: text, images: [], roundIndex: null }];
+  }
+
   function parseConversation(val) {
     var arr = toArray(val);
     if (!arr.length) return [];
+    if (arr.length === 1 && looksLikeAnswerObject(arr[0])) return answerObjectToMessages(arr[0]);
     // turns 特征优先级低于 messages：仅在没有 role 字段时按 turns 处理
     if (looksLikeMessages(arr)) return parseMessages(arr);
     if (looksLikeTurns(arr)) return turnsToFullMessages(normalizeTurns(arr));
